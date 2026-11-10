@@ -1,151 +1,168 @@
-import os
-from file_handler import baca_file, simpan_file
+"""
+inventaris.py
+Halaman 4-8 flowchart: CRUD stok sparepart & oli.
+Format inventaris.txt : kode,nama,stok,harga
+Kode barang DIBUAT OTOMATIS oleh program (contoh: OLI-001), bukan diketik admin.
+"""
+import re
+from file_handler import baca_file, simpan_file, ambil_item, FILE_INV
+import ui
 
-FILE_INV = "inventaris.txt"
+STOK_MENIPIS = 5  # stok <= 5 ditandai merah
+
+
+def buat_kode_barang(nama, data):
+    """3 huruf pertama nama + nomor urut berikutnya. Contoh: 'Oli MPX2' -> OLI-003."""
+    huruf = re.sub(r"[^A-Za-z]", "", nama).upper()
+    prefix = huruf[:3].ljust(3, "X") if huruf else "BRG"
+
+    terbesar = 0
+    for item in data:
+        cocok = re.search(r"(\d+)$", item[0])
+        if cocok:
+            terbesar = max(terbesar, int(cocok.group(1)))
+    return f"{prefix}-{terbesar + 1:03d}"
 
 
 def lihat_inventaris():
-  data = baca_file(FILE_INV)
-  print("\n" + "=" * 60)
-  print(f"{'KODE':<8} | {'NAMA BARANG':<25} | {'STOK':<8} | {'HARGA (Rp)'}")
-  print("=" * 60)
-  if not data:
-    print("            -- Data Stok Masih Kosong --")
-  else:
-    for item in data:
-      # Modul 6 & 2: Output Terformat
-      print(f"{item[0]:<8} | {item[1]:<25} | {item[2]:<8} | Rp {int(item[3]):,}")
-  print("=" * 60)
+    """READ - tampilkan semua barang."""
+    data = baca_file(FILE_INV)
+    ui.judul("Data Stok Inventaris", ui.HIJAU)
+    print(ui.warna(f"  {'NO':<5}{'KODE':<11}{'NAMA BARANG':<32}{'STOK':>8}{'HARGA':>18}",
+                   ui.BOLD + ui.KUNING))
+    ui.garis("─", ui.ABU)
+
+    if not data:
+        print(ui.warna("  -- Data Stok Masih Kosong --".center(ui.LEBAR), ui.ABU))
+    else:
+        for no, item in enumerate(data, start=1):
+            stok = int(item[2])
+            teks_stok = "HABIS" if stok == 0 else str(stok)
+            warna_stok = ui.MERAH if stok <= STOK_MENIPIS else ui.HIJAU
+            print(
+                f"  {no:<5}{ui.potong(item[0], 10):<11}"
+                f"{ui.potong(item[1], 31):<32}"
+                + ui.warna(f"{teks_stok:>8}", warna_stok)
+                + f"{ui.rupiah(item[3]):>18}"
+            )
+    ui.garis("=", ui.CYAN)
+    if data:
+        print(ui.warna(f"  Stok merah = menipis (<= {STOK_MENIPIS})", ui.ABU))
 
 
 def tambah_barang():
-  os.system("cls" if os.name == "nt" else "clear")
-  print("--- TAMBAH STOK BARANG BARU (ADMIN) ---")
-  data = baca_file(FILE_INV)
+    """CREATE - barang baru dari supplier. Kode dibuat otomatis."""
+    ui.bersih()
+    ui.judul("Tambah Barang Baru", ui.HIJAU)
+    data = baca_file(FILE_INV)
+    try:
+        nama = ui.bersihkan_koma(ui.tanya("Nama Sparepart/Oli : "))
+        if not nama:
+            raise ValueError("Nama barang tidak boleh kosong!")
+        if any(item[1].lower() == nama.lower() for item in data):
+            raise ValueError("Barang itu sudah ada! Gunakan menu Ubah untuk mengganti stok.")
 
-  kode = input("Masukkan Kode Barang (cth: SP01) : ").strip().upper()
-  nama = input("Masukkan Nama Sparepart/Oli      : ").strip()
+        kode_baru = buat_kode_barang(nama, data)      # variabel penyimpan kode otomatis
+        print(f"  Kode Barang        : {ui.warna(kode_baru, ui.BOLD + ui.HIJAU)}  (otomatis)")
 
-  # Error Handling Input Angka (Modul 7.2)
-  try:
-    if not kode or not nama:
-      raise ValueError("Kode dan Nama barang tidak boleh kosong!")
+        stok = ui.ke_angka(ui.tanya("Jumlah Stok        : "), "Stok")
+        harga = ui.ke_angka(ui.tanya("Harga Satuan (Rp)  : "), "Harga")
 
-    # Cek duplikasi kode barang
-    for item in data:
-      if item[0] == kode:
-        raise ValueError(
-            f"Kode barang '{kode}' sudah ada di inventaris! Gunakan menu edit."
-        )
-
-    stok = int(input("Masukkan Jumlah Stok (Angka)     : "))
-    harga = int(input("Masukkan Harga Satuan (Rp)       : "))
-
-    if stok < 0 or harga < 0:
-      raise ValueError("Stok dan harga tidak boleh bernilai negatif!")
-
-    data.append([kode, nama, str(stok), str(harga)])
-    simpan_file(FILE_INV, data)
-    print(f"\n✅ Barang '{nama}' berhasil ditambahkan ke inventaris!")
-
-  except ValueError as e:
-    print(f"\n❌ Gagal Menambah Barang: {e}")
-
-  finally:
-    input("\nTekan Enter untuk kembali...")
+        data.append([kode_baru, nama, str(stok), str(harga)])
+        simpan_file(FILE_INV, data)
+        ui.sukses(f"Barang {kode_baru} berhasil ditambahkan!")
+    except ValueError as e:
+        ui.gagal(f"Gagal Menambah Barang: {e}")
+    finally:
+        ui.jeda("Tekan Enter untuk kembali...")
 
 
 def ubah_barang():
-  os.system("cls" if os.name == "nt" else "clear")
-  print("--- UBAH DATA STOK / HARGA BARANG ---")
-  data = baca_file(FILE_INV)
-  lihat_inventaris()
+    """UPDATE - koreksi data / harga berubah / stok berubah. Pilih barang lewat NOMOR."""
+    ui.bersih()
+    data = baca_file(FILE_INV)
+    lihat_inventaris()
+    if not data:
+        ui.jeda()
+        return
 
-  if not data:
-    input("\nTekan Enter...")
-    return
+    try:
+        pilihan = ui.tanya_nomor("\n  Pilih NOMOR barang yang diubah : ", len(data))
+    except ValueError as e:
+        ui.gagal(str(e))
+        ui.jeda()
+        return
 
-  target_kode = input("\nMasukkan KODE barang yang ingin diubah: ").strip().upper()
-  ditemukan = False
+    for no, item in enumerate(data, start=1):
+        if no == pilihan:
+            ui.info(f"Mengubah {item[0]}. Kosongkan input (Enter) jika tidak ingin mengubah.")
+            print(f"  Data lama -> {item[1]} | stok {item[2]} | {ui.rupiah(item[3])}")
+            try:
+                nama_baru = ui.bersihkan_koma(ui.tanya("Nama baru  : ")) or item[1]
+                stok_teks = ui.tanya("Stok baru  : ")
+                harga_teks = ui.tanya("Harga baru : ")
+                stok_baru = ui.ke_angka(stok_teks, "Stok") if stok_teks else int(item[2])
+                harga_baru = ui.ke_angka(harga_teks, "Harga") if harga_teks else int(item[3])
 
-  for i in range(len(data)):
-    if data[i][0] == target_kode:
-      ditemukan = True
-      print(f"\nData Lama: {data[i][1]} | Stok: {data[i][2]} | Harga: Rp{data[i][3]}")
-      nama_baru = input(f"Nama Baru [{data[i][1]}]: ").strip() or data[i][1]
-      
-      try:
-        stok_input = input(f"Stok Baru [{data[i][2]}]: ").strip()
-        harga_input = input(f"Harga Baru [{data[i][3]}]: ").strip()
-
-        stok_baru = int(stok_input) if stok_input else int(data[i][2])
-        harga_baru = int(harga_input) if harga_input else int(data[i][3])
-
-        data[i][1] = nama_baru
-        data[i][2] = str(stok_baru)
-        data[i][3] = str(harga_baru)
-
-        simpan_file(FILE_INV, data)
-        print("\n✅ Data barang berhasil diperbarui!")
-
-      except ValueError:
-        print("\n❌ Error: Stok dan harga harus berupa angka valid!")
-      break
-
-  if not ditemukan:
-    print(f"\n❌ Kode barang '{target_kode}' tidak ditemukan.")
-
-  input("\nTekan Enter...")
+                item[1] = nama_baru
+                item[2] = str(stok_baru)
+                item[3] = str(harga_baru)
+                simpan_file(FILE_INV, data)
+                ui.sukses("Data barang berhasil diperbarui!")
+            except ValueError as e:
+                ui.gagal(f"Error: {e}")
+            break
+    ui.jeda()
 
 
 def hapus_barang():
-  os.system("cls" if os.name == "nt" else "clear")
-  print("--- HAPUS BARANG DARI INVENTARIS ---")
-  data = baca_file(FILE_INV)
-  lihat_inventaris()
+    """DELETE - barang yang sudah tidak dijual. Pilih barang lewat NOMOR."""
+    ui.bersih()
+    data = baca_file(FILE_INV)
+    lihat_inventaris()
+    if not data:
+        ui.jeda()
+        return
 
-  if not data:
-    input("\nTekan Enter...")
-    return
+    try:
+        pilihan = ui.tanya_nomor("\n  Pilih NOMOR barang yang dihapus : ", len(data))
+    except ValueError as e:
+        ui.gagal(str(e))
+        ui.jeda()
+        return
 
-  target_kode = input("\nMasukkan KODE barang yang akan dihapus: ").strip().upper()
-  data_baru = [item for item in data if item[0] != target_kode]
-
-  if len(data_baru) < len(data):
-    simpan_file(FILE_INV, data_baru)
-    print(f"\n✅ Barang dengan kode '{target_kode}' berhasil dihapus.")
-  else:
-    print(f"\n❌ Kode barang '{target_kode}' tidak ditemukan.")
-
-  input("\nTekan Enter...")
+    item = ambil_item(data, pilihan)
+    yakin = ui.tanya(f"Yakin hapus {item[0]} - {item[1]}? (y/n) : ").lower()
+    if yakin == "y":
+        data_baru = [x for x in data if x[0] != item[0]]
+        simpan_file(FILE_INV, data_baru)
+        ui.sukses("Barang berhasil dihapus dari daftar!")
+    else:
+        ui.info("Penghapusan dibatalkan.")
+    ui.jeda()
 
 
 def menu_inventaris_admin():
-  while True:
-    os.system("cls" if os.name == "nt" else "clear")
-    print("=" * 55)
-    print("      MANAJEMEN INVENTARIS BENGKEL - YAMAN AUTO       ")
-    print("=" * 55)
-    print("[1] Lihat Stok Sparepart & Oli")
-    print("[2] Tambah Barang Baru")
-    print("[3] Ubah Data Barang (Stok/Harga)")
-    print("[4] Hapus Barang dari Sistem")
-    print("[0] Kembali ke Menu Utama")
-    print("-" * 55)
+    """Menu CRUD inventaris khusus admin."""
+    while True:
+        ui.bersih()
+        ui.judul("Kelola Inventaris", ui.HIJAU)
+        ui.menu([(1, "Lihat Stok"), (2, "Tambah Barang"), (3, "Ubah Barang"),
+                 (4, "Hapus Barang"), (0, "Kembali")], ui.HIJAU)
+        pilihan = ui.tanya("Pilih menu (0-4) : ")
 
-    pilihan = input("Pilih menu (0-4): ").strip()
-    if pilihan == "1":
-      os.system("cls" if os.name == "nt" else "clear")
-      lihat_inventaris()
-      input("\nTekan Enter untuk kembali...")
-    elif pilihan == "2":
-      tambah_barang()
-    elif pilihan == "3":
-      ubah_barang()
-    elif pilihan == "4":
-      hapus_barang()
-    elif pilihan == "0":
-      break
-    else:
-      print("❌ Pilihan tidak valid.")
-      input("Tekan Enter...")
+        if pilihan == "1":
+            ui.bersih()
+            lihat_inventaris()
+            ui.jeda()
+        elif pilihan == "2":
+            tambah_barang()
+        elif pilihan == "3":
+            ubah_barang()
+        elif pilihan == "4":
+            hapus_barang()
+        elif pilihan == "0":
+            break
+        else:
+            ui.gagal("Pilihan tidak valid.")
+            ui.jeda()

@@ -1,0 +1,2 @@
+SP-1,oli motul 10-40w,10,150000
+SP-02,kampas rem,6,122312
