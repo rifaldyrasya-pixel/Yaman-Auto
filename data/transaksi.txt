@@ -1,2 +1,0 @@
-TRX-001,10-11-2026 20:20,rasya,rasya,Sparepart,oli motul 10-40w x2,300000,350000,50000
-TRX-002,10-11-2026 20:21,rasya,rasya,Sparepart,kampas rem x5,611560,650000,38440

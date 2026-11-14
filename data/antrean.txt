@@ -1,3 +1,0 @@
-ANT-001,rasya,rasya,-,klx150r,ganti ban belakang,Selesai,0,Belum
-ANT-002,rasya,rasya,-,wr 155,ganti ban,Menunggu,0,Belum
-ANT-003,rasya,rasya,KT 1234 AB,vario 125,ganti oli,Menunggu,0,Belum
