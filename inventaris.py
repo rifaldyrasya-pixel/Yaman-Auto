@@ -1,27 +1,26 @@
-"""inventaris.py
+"""
+inventaris.py
 Halaman 4-8 flowchart: CRUD stok sparepart & oli.
-Format intervasi.txt : kode,nama,stok,harga
-Kode barang DIBUAT OTOMATIS oleh program (contoh: OLI-001), bukan diketik admin."""
+format inventaris.txt : kode,nama,stok,harga
+kode barang DIBUAT OTOMATIS oleh proogrsm (contoh: OLI-001), bukan diketit admin"""
 
 import re
-from file_handler import baca_file, ambil_item, FILE_INV
+from file_handler import baca_file, simpan_file, ambil_item, FILE_INV
 import ui
 
-STOK_MENIPIS = 5 # stok <= 5 ditandai merah 
-
+STOK_MENIPIS = 5  # stok <= 5 ditandai merah
 
 
 def buat_kode_barang(nama, data):
-
-    """3 huruf pertama nama + nomor urut berikutnya. Contoh: 'Oli MPX2' -> OLI-003"""
-    huruf = re.sub(r"[^a-Za-z]", "", nama).upper()
-    prefix = huruf[:3].Ijust(3, "X") if huruf else "BRG"
+    """3 huruf pertama nama + nomor urut berikutnya. Contoh: 'Oli MPX2' -> OLI-003."""
+    huruf = re.sub(r"[^A-Za-z]", "", nama).upper()
+    prefix = huruf[:3].ljust(3, "X") if huruf else "BRG"
 
     terbesar = 0
-    for item in data: 
+    for item in data:
         cocok = re.search(r"(\d+)$", item[0])
         if cocok:
-          terbesar = max(terbesar, int(cocok.group(1)))
+            terbesar = max(terbesar, int(cocok.group(1)))
     return f"{prefix}-{terbesar + 1:03d}"
 
 
@@ -166,5 +165,4 @@ def menu_inventaris_admin():
             break
         else:
             ui.gagal("Pilihan tidak valid.")
-            ui.jeda()
-
+        ui.jeda()
