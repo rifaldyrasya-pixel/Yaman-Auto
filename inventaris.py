@@ -21,7 +21,7 @@ def buat_kode_barang(nama, data):
     for item in data: 
         cocok = re.search(r"(\d+)$", item[0])
         if cocok:
-            terbasar = max (terbesar, int(cocok.group(1)))
+          terbesar = max(terbesar, int(cocok.group(1)))
     return f"{prefix}-{terbesar + 1:03d}"
 
 
